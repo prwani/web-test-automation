@@ -341,7 +341,7 @@ def generate(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate draft CRM Excel test cases from UI with an optional Word BRD")
+    parser = argparse.ArgumentParser(description="Generate draft web-application Excel test cases from UI with an optional Word BRD")
     commands = parser.add_subparsers(dest="command", required=True)
     review = commands.add_parser("review", help="Approve an already manually sanitized UI capture")
     review.add_argument("--input", type=Path, required=True)

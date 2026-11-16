@@ -28,10 +28,10 @@ def workspace(directory):
     draft = {
         "schemaVersion": 1, "mode": "ui-only", "scope": request["scope"], "questions": [],
         "cases": [{
-            "id": "TC-001", "title": "Find a controlled customer", "category": "positive", "priority": "High",
-            "preconditions": ["Controlled test environment and two fixture customers"],
-            "steps": ["Search for the first customer"],
-            "expectedResult": "First customer is visible; second is excluded",
+            "id": "TC-001", "title": "Find a controlled item", "category": "positive", "priority": "High",
+            "preconditions": ["Controlled test environment and two fixture items"],
+            "steps": ["Search for the first item"],
+            "expectedResult": "First item is visible; second is excluded",
             "expectedBasis": "observed", "requirementRefs": [], "observationRefs": ["UI-002"], "assumptions": [],
         }],
     }
@@ -184,6 +184,43 @@ class AutomationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "target differs"):
                 automation.execute(self.source)
         self.assertFalse(any((self.root / "runs" / "automation").glob("executions/*")))
+
+    def test_application_aliases_and_conflicts(self):
+        for suffix, first, second in [
+            ("BASE_URL", "https://example.invalid/a", "https://example.invalid/b"),
+            ("APPROVED_BASE_URL", "https://example.invalid/a", "https://example.invalid/b"),
+            ("USERNAME", "first", "second"),
+            ("PASSWORD", "first", "second"),
+            ("DATA_ITEM", "first", "second"),
+            ("CASE_IDS", '["TC-001"]', '["TC-002"]'),
+        ]:
+            with self.subTest(suffix=suffix):
+                env = {f"APP_{suffix}": first, f"CRM_{suffix}": second}
+                with self.assertRaisesRegex(ValueError, "Conflicting"):
+                    automation.check_aliases(env)
+                self.assertEqual(automation.aliased({f"APP_{suffix}": first}, suffix), first)
+                self.assertEqual(automation.aliased({f"CRM_{suffix}": first}, suffix), first)
+        automation.check_aliases({"APP_BASE_URL": "https://example.invalid", "CRM_BASE_URL": "https://example.invalid/"})
+
+    def test_compile_and_execute_reject_conflicting_targets(self):
+        run = automation.prepare(self.source, self.root / "runs" / "conflicts", True)
+        write_json(run / "plan.json", minimal_plan())
+        with patch.dict(automation.os.environ, {"APP_BASE_URL": "http://127.0.0.1:8123",
+                                                "CRM_BASE_URL": "http://127.0.0.1:9999"}, clear=True):
+            with self.assertRaisesRegex(ValueError, "Conflicting"):
+                automation.compile_plan(run, run / "plan.json", True)
+        with patch.dict(automation.os.environ, {"APP_BASE_URL": "http://127.0.0.1:8123"}, clear=True):
+            with self.assertRaisesRegex(ValueError, "conflicts"):
+                automation.compile_plan(run, run / "plan.json", True, "http://127.0.0.1:9999")
+            automation.compile_plan(run, run / "plan.json", True)
+        with patch.dict(automation.os.environ, {"APP_BASE_URL": "http://127.0.0.1:9999"}, clear=True):
+            with self.assertRaisesRegex(ValueError, "target differs"):
+                automation.execute(self.source)
+        with patch.dict(automation.os.environ, {"APP_BASE_URL": "http://127.0.0.1:8123",
+                                                "APP_DATA_ITEM": "a", "CRM_DATA_ITEM": "b"}, clear=True):
+            with self.assertRaisesRegex(ValueError, "Conflicting"):
+                automation.execute(self.source)
+        self.assertFalse((run / "executions").exists())
 
     def test_mapping_rejects_insecure_or_secret_bearing_crm_urls(self):
         for value in [None, "http://external.invalid", "https://user:password@crm.invalid",

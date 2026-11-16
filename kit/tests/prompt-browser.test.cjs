@@ -7,22 +7,22 @@ const http = require('node:http');
 const { spawn } = require('node:child_process');
 
 test('prompt-only headed capture records real local UI after operator confirmation', { timeout: 90000 }, async () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'crm-prompt-browser-'));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'web-prompt-browser-'));
   const server = http.createServer((request, response) => {
     response.writeHead(200, { 'Content-Type': 'text/html' });
-    response.end('<!doctype html><title>Controlled capture fixture</title><main><h1>Customer search</h1><label>Search <input name="search"></label><p>CUSTOMER_A</p></main>');
+    response.end('<!doctype html><title>Controlled capture fixture</title><main><h1>Item search</h1><label>Search <input name="search"></label><p>ITEM_A</p></main>');
   });
   let child;
   try {
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const url = `http://127.0.0.1:${server.address().port}`;
-    const prompt = 'Explore customer search and clearing search. Navigation: main page > Customer search.';
+    const prompt = 'Explore item search and clearing search. Navigation: main page > Item search.';
     const output = path.join(directory, 'observations.raw.json');
     const interactions = [
       ['type SIGNED IN', 'SIGNED IN'],
-      ['Enter "Feature: checkpoint"', 'Customer search: initial page'],
+      ['Enter "Feature: checkpoint"', 'Item search: initial page'],
       ['Describe the actions', 'Open the authorized local fixture'],
-      ['Describe the outcome', 'Customer search heading and CUSTOMER_A are visible'],
+      ['Describe the outcome', 'Item search heading and ITEM_A are visible'],
       ['Enter "Feature: checkpoint"', ''],
     ];
     child = spawn(process.execPath, [
@@ -56,9 +56,9 @@ test('prompt-only headed capture records real local UI after operator confirmati
     assert.equal(capture.scope, prompt);
     assert.equal(capture.reviewed, false);
     assert.equal(capture.observations.length, 1);
-    assert.equal(capture.observations[0].title, 'Customer search: initial page');
-    assert.match(capture.observations[0].evidence, /Customer search/);
-    assert.match(capture.observations[0].evidence, /CUSTOMER_A/);
+    assert.equal(capture.observations[0].title, 'Item search: initial page');
+    assert.match(capture.observations[0].evidence, /Item search/);
+    assert.match(capture.observations[0].evidence, /ITEM_A/);
     assert.equal(capture.provenance.method, 'Playwright live browser capture');
   } finally {
     if (child && child.exitCode === null) child.kill();

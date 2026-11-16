@@ -1,7 +1,8 @@
-"""Controlled browser proof: real Playwright runs, never a customer CRM."""
+"""Controlled browser proof: real Playwright runs against a local fixture."""
 import functools
 import http.server
 import os
+import re
 import shutil
 import tempfile
 import threading
@@ -16,11 +17,11 @@ ROOT = fixtures.ROOT
 write_json = fixtures.write_json
 read_json = fixtures.read_json
 
-HTML = """<!doctype html><html lang="en"><title>Controlled customer-search fixture</title>
-<label for="query">Search customers</label><input id="query"><button id="search">Search</button>
+HTML = """<!doctype html><html lang="en"><title>Controlled item-search fixture</title>
+<label for="query">Search items</label><input id="query"><button id="search">Search</button>
 <button id="clear">Clear</button><ul id="results"></ul><div id="empty" hidden>No Data</div>
 <script>
-const names=['Fixture Customer One','Fixture Customer Two'];
+const names=['Fixture Item One','Fixture Item Two'];
 function render() {
  const found=names.filter(name=>name.toLowerCase().includes(document.querySelector('#query').value.toLowerCase()));
  document.querySelector('#results').replaceChildren(...found.map(name=>{
@@ -40,12 +41,12 @@ def css(value):
 
 class BrowserLifecycleTests(unittest.TestCase):
     def test_simple_login_and_password_target_guard_use_private_environment(self):
-        with tempfile.TemporaryDirectory(prefix="crm-login-browser-", dir=ROOT / ".local") as directory:
+        with tempfile.TemporaryDirectory(prefix="web-login-browser-", dir=ROOT / ".local") as directory:
             root, source, draft = fixtures.workspace(directory)
             draft["cases"][0].update({
-                "title": "Read the authorized customer-search page",
+                "title": "Read the authorized item-search page",
                 "steps": ["Sign in using the configured test account", "Inspect the authorized page"],
-                "expectedResult": "Authorized customer-search page is visible",
+                "expectedResult": "Authorized item-search page is visible",
             })
             write_json(source / "draft.json", draft)
             fixtures.export_workbook(read_json(source / "request.json"), draft, source / "test-cases.xlsx")
@@ -53,7 +54,7 @@ class BrowserLifecycleTests(unittest.TestCase):
             site.mkdir()
             page = """<!doctype html><title>Login fixture</title><form id="login">
 <input id="username"><input id="password" type="password"><button id="submit">Sign in</button></form>
-<section id="result" hidden>Authorized customer-search page</section><script>
+<section id="result" hidden>Authorized item-search page</section><script>
 document.querySelector('#login').onsubmit=event=>{
  event.preventDefault();
  if(document.querySelector('#username').value==='fixture-user' &&
@@ -72,8 +73,8 @@ document.querySelector('#login').onsubmit=event=>{
             plan["login"] = {key: css(selector) for key, selector in {
                 "username": "#username", "password": "#password", "submit": "#submit", "authenticated": "#result",
             }.items()}
-            env = {"CRM_BASE_URL": f"http://127.0.0.1:{server.server_port}",
-                   "CRM_USERNAME": "fixture-user", "CRM_PASSWORD": "fixture-only-password"}
+            env = {"APP_BASE_URL": f"http://127.0.0.1:{server.server_port}",
+                   "APP_USERNAME": "fixture-user", "APP_PASSWORD": "fixture-only-password"}
             with patch.object(automation, "ROOT", root), patch.dict(os.environ, env):
                 if os.name == "nt":
                     import subprocess
@@ -84,8 +85,24 @@ document.querySelector('#login').onsubmit=event=>{
                 try:
                     run = automation.prepare(source, root / "runs" / "login", True)
                     write_json(run / "plan.json", plan)
-                    automation.compile_plan(run, run / "plan.json", True)
+                    mapping = automation.compile_plan(run, run / "plan.json", True)
+                    # Model a previously pinned runtime that only understands legacy names.
+                    for filename in ("runtime.cjs", "playwright.config.cjs"):
+                        path = run / filename
+                        content, count = re.subn(r"function envValue\(suffix\) \{.*?\n\}",
+                                                 "function envValue(suffix) { return process.env[`CRM_${suffix}`]; }",
+                                                 path.read_text(encoding="utf-8"), count=1, flags=re.DOTALL)
+                        self.assertEqual(count, 1)
+                        path.write_text(content, encoding="utf-8")
+                    mapped = read_json(mapping)
+                    for filename in ("runtime.cjs", "playwright.config.cjs"):
+                        mapped["files"][filename] = automation.sha(run / filename)
+                    write_json(mapping, mapped)
                     self.assertEqual(automation.execute(source, evidence=True), 0)
+                    with patch.dict(os.environ, {"CRM_BASE_URL": env["APP_BASE_URL"],
+                                                "CRM_USERNAME": env["APP_USERNAME"],
+                                                "CRM_PASSWORD": env["APP_PASSWORD"]}):
+                        self.assertEqual(automation.execute(source), 0)
                     self.assertEqual(len(list((run / "executions").rglob("authenticated-workflow-trace.zip"))), 1)
                     (site / "index.html").write_text(page.replace('type="password"', 'type="text"'), encoding="utf-8")
                     self.assertEqual(automation.execute(source, evidence=True), 1)
@@ -96,7 +113,7 @@ document.querySelector('#login').onsubmit=event=>{
                     self.assertEqual(list(failure.rglob("outcome.png")), [])
                     self.assertEqual(list(failure.rglob("authenticated-workflow-trace.zip")), [])
                     for path in [failure / "runner.log", failure / "playwright-results.json"]:
-                        self.assertNotIn(env["CRM_PASSWORD"], path.read_text(encoding="utf-8"))
+                        self.assertNotIn(env["APP_PASSWORD"], path.read_text(encoding="utf-8"))
                 finally:
                     if os.name == "nt":
                         os.rmdir(root / "node_modules")
@@ -104,7 +121,7 @@ document.querySelector('#login').onsubmit=event=>{
                         (root / "node_modules").unlink()
 
     def test_real_playwright_runs_by_workbook_json_and_folder_with_exact_case_mapping(self):
-        with tempfile.TemporaryDirectory(prefix="crm-mapped-browser-", dir=ROOT / ".local") as directory:
+        with tempfile.TemporaryDirectory(prefix="web-mapped-browser-", dir=ROOT / ".local") as directory:
             root, source, draft = fixtures.workspace(directory)
             site = root / "site"
             site.mkdir()
@@ -115,16 +132,17 @@ document.querySelector('#login').onsubmit=event=>{
             thread.start()
             self.addCleanup(server.server_close)
             self.addCleanup(server.shutdown)
-            env = {"CRM_BASE_URL": f"http://127.0.0.1:{server.server_port}"}
-            titles = ["Full-name matching excludes unrelated customer", "Partial matching finds both fixture customers",
-                      "No-match empty state and no rows", "Clearing restores both fixture customers"]
-            expectations = ["First customer is visible; second is excluded", "Both fixture customers appear",
-                            "No Data is visible and there are zero rows", "Search is empty and both fixture customers appear"]
+            env = {"APP_BASE_URL": f"http://127.0.0.1:{server.server_port}",
+                   "APP_DATA_FIRST": "Fixture Item One"}
+            titles = ["Full-name matching excludes unrelated item", "Partial matching finds both fixture items",
+                      "No-match empty state and no rows", "Clearing restores both fixture items"]
+            expectations = ["First item is visible; second is excluded", "Both fixture items appear",
+                            "No Data is visible and there are zero rows", "Search is empty and both fixture items appear"]
             draft["cases"] = []
             for i, title in enumerate(titles, 1):
                 case = {
                     "id": f"TC-{i:03}", "title": title, "category": "positive" if i < 3 else "recovery",
-                    "priority": "High", "preconditions": ["Controlled customer-search fixture with two known customers"],
+                    "priority": "High", "preconditions": ["Controlled item-search fixture with two known items"],
                     "steps": ["Search using approved fixture data, then inspect actual results" if i != 4 else "Search, clear, inspect results"],
                     "expectedResult": expectations[i - 1], "expectedBasis": "observed", "requirementRefs": [],
                     "observationRefs": ["UI-002"], "assumptions": [],
@@ -134,20 +152,20 @@ document.querySelector('#login').onsubmit=event=>{
             fixtures.export_workbook(read_json(source / "request.json"), draft, source / "test-cases.xlsx")
             query = css("#query")
             search = {"action": "click", "target": css("#search")}
-            first = {"by": "text", "value": "Fixture Customer One"}
-            second = {"by": "text", "value": "Fixture Customer Two"}
+            first = {"by": "text", "value": "Fixture Item One"}
+            second = {"by": "text", "value": "Fixture Item Two"}
             def search_for(value):
                 return [{"action": "fill", "target": query, "value": value}, search]
             plan = {"schemaVersion": 1, "login": None, "cases": [
-                {"caseId": "TC-001", "steps": search_for("Fixture Customer One") + [
+                {"caseId": "TC-001", "steps": search_for("{{FIRST}}") + [
                     {"action": "expectVisible", "target": first}, {"action": "expectAbsent", "target": second}]},
-                {"caseId": "TC-002", "steps": search_for("Fixture Customer") + [
+                {"caseId": "TC-002", "steps": search_for("Fixture Item") + [
                     {"action": "expectVisible", "target": first}, {"action": "expectVisible", "target": second}]},
                 {"caseId": "TC-003", "steps": search_for("no matching fixture") + [
                     {"action": "expectText", "target": css("#empty"), "value": "No Data"},
                     {"action": "expectVisible", "target": css("#empty")},
                     {"action": "expectCount", "target": css("#results li"), "value": 0}]},
-                {"caseId": "TC-004", "steps": search_for("Fixture Customer One") + [
+                {"caseId": "TC-004", "steps": search_for("Fixture Item One") + [
                     {"action": "expectVisible", "target": first}, {"action": "expectAbsent", "target": second},
                     {"action": "click", "target": css("#clear")},
                     {"action": "expectValue", "target": query, "value": ""},
@@ -180,8 +198,8 @@ document.querySelector('#login').onsubmit=event=>{
                     self.assertEqual(len(list((run / "executions").rglob("outcome.png"))), 4)
                     self.assertEqual(automation.execute(source / "test-cases.xlsx", case_ids=["TC-003"]), 0)
                     (site / "index.html").write_text(
-                        HTML.replace("const names=['Fixture Customer One','Fixture Customer Two'];",
-                                     "const names=['Fixture Customer Two'];"), encoding="utf-8")
+                        HTML.replace("const names=['Fixture Item One','Fixture Item Two'];",
+                                     "const names=['Fixture Item Two'];"), encoding="utf-8")
                     self.assertEqual(automation.execute(source, case_ids=["TC-001"]), 1)
                     reports = sorted((run / "executions").glob("*/execution-summary.json"),
                                      key=lambda p: p.stat().st_mtime_ns)

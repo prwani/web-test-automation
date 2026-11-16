@@ -1,17 +1,16 @@
 ---
-name: crm-testcase-generation
-description: Generate review-ready Excel CRM test cases from reviewed live UI observations, either with a Word BRD (ui-brd mode) or from UI behavior alone (ui-only mode).
+name: web-testcase-generation
+description: Generate review-ready Excel web test cases from reviewed UI observations with an optional Word BRD.
 ---
 
-# CRM test-case generation
+# Web test-case generation
 
-Use the kit README and `scripts/cases.py`. The kit targets an authorized CRM
-test environment; it does not require a hosted AI service.
+Use the kit README and `scripts/cases.py` against an authorized web test environment.
 
-1. Select the explicit flag: `--mode ui-brd` uses CRM observations plus a Word
-   BRD; `--mode ui-only` uses CRM observations and forbids any BRD input.
-   The scope can come from a customer prompt naming multiple features and
-   optional navigation hints. Use crm-feature-exploration for browser-agent
+1. Select the explicit flag: `--mode ui-brd` uses UI observations plus a Word
+   BRD; `--mode ui-only` uses UI observations and forbids any BRD input.
+   The scope can come from a prompt naming multiple features and
+   optional navigation hints. Use web-feature-exploration for browser-agent
    capture, or prompt-guided local capture. Requested features are not evidence:
    preserve feature names and flag requested but unobserved areas as gaps.
 2. Obtain authorized, scoped, read-only browser observations. Use Playwright
@@ -39,7 +38,7 @@ test environment; it does not require a hosted AI service.
 8. Every case is `Draft - Review Required`, never Passed or Approved.
    These are candidate test definitions, not execution evidence. Review business
    correctness, data, permissions, testability and destructive effects with the
-   customer before automation.
+   operator before automation.
 9. Preserve provenance, source hashes and reference IDs. Do not silently skip,
    repair away failures or weaken business assertions. Automation and execution
-   are a separate step needing a CRM-specific page model and validation.
+   are a separate step needing verified application-specific locators and validation.

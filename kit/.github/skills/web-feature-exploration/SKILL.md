@@ -1,11 +1,11 @@
 ---
-name: crm-feature-exploration
-description: Explore user-selected CRM features from a natural-language prompt with optional main-page navigation hints, using approved browser tools and read-only record interactions.
+name: web-feature-exploration
+description: Explore selected web application features from a natural-language prompt using approved browser tools and read-only interactions.
 ---
 
-# Prompt-scoped CRM feature exploration
+# Prompt-scoped web feature exploration
 
-The customer supplies a CRM URL and a prompt naming one or more features.
+The operator supplies an application URL and a prompt naming one or more features.
 Navigation instructions are optional hints, not fixed routes or selectors.
 Use `scripts/explore.cjs` to prepare a task and read `prompts/explore.txt`.
 
@@ -26,5 +26,5 @@ Use `scripts/explore.cjs` to prepare a task and read `prompts/explore.txt`.
 - Preserve the exact request scope. Output reviewed=false and document partial
   coverage honestly; review and test-case generation are separate steps.
 
-This is a portable workflow contract, not a universal CRM adapter. Tool names
-depend on the agent host. No model or CRM-specific selector is hardcoded.
+This is a portable workflow contract, not a universal browser adapter. Tool names
+depend on the agent host. No model or application-specific selector is hardcoded.

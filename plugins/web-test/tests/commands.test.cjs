@@ -1,9 +1,28 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const path = require('node:path');
 const readline = require('node:readline');
 const { spawn, execFile } = require('node:child_process');
 const { promisify } = require('node:util');
+
+test('wrapper declares four inline commands with preview and approval gates', () => {
+  const plugin = path.resolve(__dirname, '..');
+  const metadata = JSON.parse(fs.readFileSync(path.join(plugin, 'plugin.json'), 'utf8'));
+  assert.equal(metadata.name, 'web-test');
+  assert.equal(metadata.version, '1.3.0');
+  const commandDir = path.join(plugin, 'com.github.copilot', 'commands');
+  const names = ['explore', 'generate-cases', 'create-tests', 'run-tests'];
+  assert.deepEqual(fs.readdirSync(commandDir).sort(), names.map(name => `${name}.md`).sort());
+  for (const name of names) {
+    const text = fs.readFileSync(path.join(commandDir, `${name}.md`), 'utf8');
+    assert.match(text, /\$ARGUMENTS/);
+    assert.match(text, /appends/i);
+    assert.match(text, /preview-only/i);
+    assert.match(text, /approval/i);
+    assert.match(text, /`web-test`/);
+  }
+});
 
 test('Copilot natively registers all four inline-prompt plugin commands', { timeout: 90000 }, async () => {
   const plugin = path.resolve(__dirname, '..');
@@ -38,11 +57,11 @@ test('Copilot natively registers all four inline-prompt plugin commands', { time
       });
       send(1, 'initialize', {
         protocolVersion: 1, clientCapabilities: {},
-        clientInfo: { name: 'crm-command-discovery-test', version: '1.0.0' },
+        clientInfo: { name: 'web-command-discovery-test', version: '1.0.0' },
       });
     });
     for (const name of ['explore', 'generate-cases', 'create-tests', 'run-tests']) {
-      const command = commands.find(c => c.name === `crm-testcase:${name}`);
+      const command = commands.find(c => c.name === `web-test:${name}`);
       assert(command, `Missing registered slash command: ${name}`);
       assert(command.description?.length > 0);
       assert(command.input, `Command must accept inline input: ${name}`);

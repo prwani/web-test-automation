@@ -15,16 +15,16 @@ from cases import ROOT, STATUS, brd_units, export_run, export_workbook, make_req
 
 class CaseGenerationTests(unittest.TestCase):
     def setUp(self):
-        self.fixture_dir = tempfile.TemporaryDirectory()
-        self.addCleanup(self.fixture_dir.cleanup)
-        self.ui = write_observations(self.fixture_dir.name)
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.ui = write_observations(directory.name)
         self.request = make_request("ui-only", self.ui)
         self.draft = {
             "schemaVersion": 1, "mode": "ui-only", "scope": self.request["scope"],
             "cases": [{
-                "id": "TC-001", "title": "Find a customer", "category": "positive", "priority": "High",
-                "preconditions": ["An authorized user and controlled accounts"],
-                "steps": ["Open Accounts", "Search for CUSTOMER_A"], "expectedResult": "CUSTOMER_A is shown",
+                "id": "TC-001", "title": "Find an item", "category": "positive", "priority": "High",
+                "preconditions": ["An authorized user and controlled items"],
+                "steps": ["Open search", "Search for ITEM_A"], "expectedResult": "ITEM_A is shown",
                 "expectedBasis": "observed", "requirementRefs": [], "observationRefs": ["UI-002"], "assumptions": [],
             }], "questions": [],
         }
@@ -37,7 +37,7 @@ class CaseGenerationTests(unittest.TestCase):
     def test_feature_navigation_scope_reaches_generation_without_becoming_requirements(self):
         with tempfile.TemporaryDirectory() as directory:
             data = json.loads(self.ui.read_text(encoding="utf-8"))
-            data["scope"] = "Explore full-name search and clearing search. Navigation: main menu > Accounts."
+            data["scope"] = "Explore item search and clearing search. Navigation: main menu > Search."
             path = Path(directory) / "reviewed.json"
             write_json(path, data)
             request = make_request("ui-only", path)
@@ -53,9 +53,11 @@ class CaseGenerationTests(unittest.TestCase):
             make_request("ui-only", self.ui, Path("should-not-be-read.docx"))
 
     def test_ui_brd_preserves_generic_source_ids(self):
-        request = make_request("ui-brd", self.ui, write_brd(self.fixture_dir.name))
-        self.assertTrue(any("REQ-42" in u["text"] for u in request["sourceUnits"]))
-        self.assertTrue(all(u["id"].startswith("BRD-") for u in request["sourceUnits"]))
+        with tempfile.TemporaryDirectory() as directory:
+            path = write_brd(directory)
+            request = make_request("ui-brd", self.ui, path)
+            self.assertTrue(any("REQ-42" in u["text"] for u in request["sourceUnits"]))
+            self.assertTrue(all(u["id"].startswith("BRD-") for u in request["sourceUnits"]))
 
     def test_unreviewed_capture_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -141,8 +143,8 @@ class CaseGenerationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "generic.docx"
             with ZipFile(path, "w") as archive:
-                archive.writestr("word/document.xml", '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>REQ-42: Search customers by account name.</w:t></w:r></w:p></w:body></w:document>')
-            self.assertEqual(brd_units(path)[0]["text"], "REQ-42: Search customers by account name.")
+                archive.writestr("word/document.xml", '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>REQ-42: Search items by name.</w:t></w:r></w:p></w:body></w:document>')
+            self.assertEqual(brd_units(path)[0]["text"], "REQ-42: Search items by name.")
 
     def test_tracked_changes_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

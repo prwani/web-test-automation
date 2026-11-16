@@ -21,3 +21,20 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Business inputs, generated cases, credentials and browser sessions
+*.docx
+*.xlsx
+*.xls
+*.pem
+*.key
+*.pfx
+id_rsa
+id_ed25519
+access.json
+storage-state*.json
+storageState*.json
+.web-test-workspace.json
+.crm-testcase-workspace.json
+MANIFEST.json
+BUNDLE-MANIFEST.json

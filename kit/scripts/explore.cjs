@@ -4,10 +4,10 @@ const path = require('node:path');
 function validateBrief(urlValue, promptValue) {
   const url = new URL(urlValue);
   if (url.username || url.password || url.search || url.hash) {
-    throw new Error('CRM URL must not contain credentials, query parameters or fragments');
+    throw new Error('Application URL must not contain credentials, query parameters or fragments');
   }
   if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname))) {
-    throw new Error('CRM URL requires HTTPS except on loopback');
+    throw new Error('Application URL requires HTTPS except on loopback');
   }
   if (typeof promptValue !== 'string' || !promptValue.trim() || promptValue.length > 20000 ||
       /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(promptValue)) {

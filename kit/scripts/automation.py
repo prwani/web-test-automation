@@ -23,19 +23,41 @@ def inside(path, parent):
     return Path(path).resolve().is_relative_to(Path(parent).resolve())
 
 
-def crm_url(value):
+def app_url(value):
     if not isinstance(value, str) or not value.isascii() or any(c.isspace() or ord(c) < 32 for c in value) or "\\" in value:
-        raise ValueError("Provide the approved CRM_BASE_URL or --base-url as an ASCII URL without whitespace")
+        raise ValueError("Provide the approved APP_BASE_URL or --base-url as an ASCII URL without whitespace")
     parsed = urlsplit(value)
     if (not parsed.hostname or parsed.username is not None or parsed.password is not None or parsed.query or parsed.fragment
             or parsed.scheme not in {"https", "http"}
             or (parsed.scheme == "http" and parsed.hostname not in {"localhost", "127.0.0.1", "::1"})):
-        raise ValueError("Approved CRM URL requires HTTPS (or loopback HTTP), no credentials, query or fragment")
+        raise ValueError("Approved application URL requires HTTPS (or loopback HTTP), no credentials, query or fragment")
     host = f"[{parsed.hostname}]" if ":" in parsed.hostname else parsed.hostname
     port = parsed.port
     if port is not None and port != (443 if parsed.scheme == "https" else 80):
         host += f":{port}"
     return urlunsplit((parsed.scheme, host, parsed.path or "/", "", ""))
+
+
+# Kept for callers of the original Python interface.
+crm_url = app_url
+
+
+def check_aliases(env):
+    names = {"BASE_URL", "APPROVED_BASE_URL", "USERNAME", "PASSWORD", "CASE_IDS",
+             "RUN_DIR", "EVIDENCE", "HEADED"}
+    names.update(key[4:] for key in env if key.startswith(("APP_DATA_", "CRM_DATA_")))
+    for key in names:
+        app, legacy = f"APP_{key}", f"CRM_{key}"
+        if app in env and legacy in env:
+            left, right = env[app], env[legacy]
+            if key in {"BASE_URL", "APPROVED_BASE_URL"}:
+                left, right = app_url(left), app_url(right)
+            if left != right:
+                raise ValueError(f"Conflicting {app} and {legacy} environment variables")
+
+
+def aliased(env, suffix):
+    return env.get(f"APP_{suffix}", env.get(f"CRM_{suffix}"))
 
 
 def source_cases(source):
@@ -194,7 +216,11 @@ def compile_plan(run, plan_path, approved=False, base_url=None):
         raise ValueError("Compile only a prepared automation folder in this workspace's runs directory")
     request = prepared_request(run)
     plan = validate_plan(read_json(plan_path), request["cases"])
-    approved_url = crm_url(base_url if base_url is not None else os.environ.get("CRM_BASE_URL"))
+    check_aliases(os.environ)
+    configured_url = aliased(os.environ, "BASE_URL")
+    approved_url = app_url(base_url if base_url is not None else configured_url)
+    if base_url is not None and configured_url is not None and approved_url != app_url(configured_url):
+        raise ValueError("--base-url conflicts with the configured application base URL")
     names = ["compiled-plan.json", "cases.json", "runtime.cjs", "playwright.config.cjs", "tests/generated.spec.cjs"]
     if (run / "playwright-mapping.json").exists() or any((run / name).exists() for name in names):
         raise ValueError("Compiled output already exists; use a fresh preparation instead of overwriting evidence")
@@ -263,7 +289,7 @@ def verify_mapping(path):
     expected_names = {"compiled-plan.json", "cases.json", "runtime.cjs", "playwright.config.cjs", "tests/generated.spec.cjs"}
     if mapping.get("schemaVersion") != 1 or set(mapping.get("files", {})) != expected_names:
         raise ValueError("Invalid compiled mapping file set")
-    crm_url(mapping.get("baseURL"))
+    app_url(mapping.get("baseURL"))
     for name, digest in mapping["files"].items():
         if not inside(run / name, run) or (run / name).is_symlink() or sha(run / name) != digest:
             raise ValueError("Compiled plan/script/config changed; recompile approved cases in a fresh folder")
@@ -304,8 +330,12 @@ def report_cases(report, selected):
 def execute(source, explicit=None, case_ids=None, evidence=False, headed=False):
     mapping_path = resolve_mapping(source, explicit)
     mapping = verify_mapping(mapping_path)
-    if crm_url(os.environ.get("CRM_BASE_URL")) != crm_url(mapping["baseURL"]):
-        raise ValueError("Runtime CRM target differs from the approved mapped base URL; review/recompile for the intended CRM before execution")
+    check_aliases(os.environ)
+    if app_url(aliased(os.environ, "BASE_URL")) != app_url(mapping["baseURL"]):
+        raise ValueError("Runtime application target differs from the approved mapped base URL; review/recompile for the intended application before execution")
+    approved = aliased(os.environ, "APPROVED_BASE_URL")
+    if approved is not None and app_url(approved) != app_url(mapping["baseURL"]):
+        raise ValueError("Configured approved base URL differs from the source mapping")
     selected = mapping["cases"]
     if case_ids:
         strings(case_ids, "selected case IDs", allow_empty=False)
@@ -318,9 +348,21 @@ def execute(source, explicit=None, case_ids=None, evidence=False, headed=False):
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
     output = mapping_path.parent / "executions" / stamp
     output.mkdir(parents=True)
-    env = {**os.environ, "CRM_APPROVED_BASE_URL": mapping["baseURL"],
-           "CRM_RUN_DIR": str(output), "CRM_CASE_IDS": json.dumps([c["caseId"] for c in selected]),
-           "CRM_EVIDENCE": "1" if evidence else "0", "CRM_HEADED": "1" if headed else "0"}
+    env = dict(os.environ)
+    # Older pinned runtimes and configs read CRM_*; expose matching aliases to both generations.
+    for key in list(env):
+        if key.startswith(("APP_DATA_", "CRM_DATA_")):
+            suffix = key[4:]
+            env[f"APP_{suffix}"] = env[f"CRM_{suffix}"] = aliased(env, suffix)
+    for suffix in ("BASE_URL", "USERNAME", "PASSWORD"):
+        value = aliased(env, suffix)
+        if value is not None:
+            env[f"APP_{suffix}"] = env[f"CRM_{suffix}"] = value
+    internal = {"APPROVED_BASE_URL": mapping["baseURL"], "RUN_DIR": str(output),
+                "CASE_IDS": json.dumps([c["caseId"] for c in selected]),
+                "EVIDENCE": "1" if evidence else "0", "HEADED": "1" if headed else "0"}
+    for suffix, value in internal.items():
+        env[f"APP_{suffix}"] = env[f"CRM_{suffix}"] = value
     command = ["node", str(cli), "test", "--config", str(mapping_path.parent / "playwright.config.cjs")]
     with (output / "runner.log").open("w", encoding="utf-8") as log:
         try:
@@ -360,7 +402,7 @@ def main():
     compile_cmd.add_argument("--run", type=Path, required=True)
     compile_cmd.add_argument("--plan", type=Path, required=True)
     compile_cmd.add_argument("--confirm-approved-plan", action="store_true")
-    compile_cmd.add_argument("--base-url", help="Approved CRM URL; otherwise use CRM_BASE_URL from the environment")
+    compile_cmd.add_argument("--base-url", help="Approved application URL; otherwise use APP_BASE_URL (legacy CRM_BASE_URL also supported)")
     run = commands.add_parser("run")
     run.add_argument("--source", type=Path, required=True)
     run.add_argument("--mapping", type=Path)

@@ -4,7 +4,7 @@ const { capture, options } = require('../scripts/capture.cjs');
 
 const config = {
   url: 'https://example.invalid',
-  scope: 'Customer search',
+  scope: 'Item search',
   captureSelector: 'main',
   authenticatedSelector: 'main',
 };

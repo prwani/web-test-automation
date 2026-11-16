@@ -1,25 +1,92 @@
-# Web test automation foundation
+# Web test automation
 
-A curated browser-testing foundation with an existing CRM-oriented baseline,
-not yet a general-purpose application testing solution. It provides three phases:
-explore and generate reviewable cases; compile approved cases into Playwright
-tests; and execute mapped tests against an explicitly authorized target.
+An application-neutral foundation for AI-assisted **browser** test-case
+generation and reviewed Playwright automation. Supply the web application's
+features and navigation hints; ERP, banking and CRM are possible domains,
+not built-in adapters or claims of validated compatibility.
 
-`kit/` is the canonical runtime; `plugins/crm-testcase/` contains the Copilot
-wrapper. Build both distributions with Python 3:
+The Copilot plugin follows three phases:
 
-```shell
-python scripts/build-distributions.py
+| Phase | Result |
+|---|---|
+| Explore and generate cases | Reviewed UI observations, draft Excel/JSON cases and requirement/UI traceability |
+| Create executable tests | Separately approved locator/action/assertion plan compiled to Playwright tests and a source mapping |
+| Execute mapped cases | Resolve a supported workbook, JSON or folder to approved tests; report actual per-case results |
+
+Use **ui-only** for reviewed observations, or **ui-brd** for observations plus
+an approved Word BRD. Unknown business rules remain questions or explicit
+proposals, not facts inferred from the UI.
+
+## Build and load
+
+`kit` is the canonical runtime. `plugins\web-test` contains only the unique
+Copilot wrapper. Specialist skills, embedded kit copies, integrity manifests
+and ZIPs are generated into ignored `dist` output, not duplicated in Git.
+
+```powershell
+python scripts\build-distributions.py
+copilot --plugin-dir ".\dist\web-test-plugin"
 ```
 
-Generated ZIPs and an unpacked plugin for testing are placed in `dist/` and are
-not source artifacts. The plugin initializer copies the bundled kit to a fresh
-workspace; it does not install dependencies or access a CRM. See the kit README
-for usage and prerequisites. Package feeds must be selected according to your
-organization's policy.
+In the loaded Copilot session, put the request directly after a command:
 
-Limitations: the baseline remains CRM-specific; cases and plans require human
-review and authorization; generated tests require observed selectors and
-controlled data. It does not import arbitrary workbooks or guarantee business
-coverage. It does not include credentials, source documents, execution evidence,
-browser dependencies, or a hosted service. No license grant is supplied.
+```text
+/web-test:explore Mode: ui-only. Application URL: https://test.example.invalid. Explore purchase-order search. Navigation: Procurement > Orders > Search. Work folder: "D:\Web Test Work\Orders". Read-only; stop before case generation.
+/web-test:generate-cases Mode: ui-only. Use my reviewed observations to draft search cases and flag missing boundary-rule evidence.
+/web-test:create-tests Use "runs\orders\test-cases.xlsx". Prepare an observed-locator plan for review; do not execute.
+/web-test:run-tests Run the approved cases in "runs\orders" using its existing mapping. Do not capture screenshots or traces.
+```
+
+These are separate requests, not automatic approval of subsequent phases.
+Missing required inputs or unresolved reviews stop the workflow. No separate
+customer-authored prompt file is needed.
+
+The initializer creates a fresh workspace and verifies bundled file hashes.
+It installs nothing and performs no authentication or application access.
+Use that workspace's README for dependency setup and the mapped workflow.
+Node.js, Python, Playwright/Chromium and an authenticated compatible Copilot
+host are operator-managed prerequisites. Use your organization's approved
+package feeds. Browser-agent/MCP support depends on the chosen host.
+
+## Current boundaries
+
+- Intended for authorized read/search/navigation scenarios with controlled
+  test data. Record writes, ERP posting and financial transactions are not
+  supported by this initial generalization.
+- The constrained runtime supports navigation, click, fill and press, plus
+  visibility, absence, exact text/value and count assertions. Arbitrary widgets,
+  frames, file transfers and cross-origin authentication need additional work.
+- Human-assisted authentication remains explicit. Never put credentials,
+  authentication storage or production/customer data into model prompts.
+- Only the kit's exported `.xlsx` and companion JSON/request format is
+  supported, not arbitrary spreadsheet schemas or legacy binary `.xls`.
+- Source/compiled hashes and the approved target are checked before execution.
+  Missing, stale or ambiguous mappings are blockers. Structural validation
+  does not establish semantic assertion coverage or prove an interaction safe.
+- Cases and plans require separate review. No skipped business assertions,
+  weakened expectations or added retries to make a run pass. Screenshots and
+  traces require explicit data approval and stay outside Git.
+
+This is not a guarantee of automating every web application. There are no
+native desktop/mobile adapters, bundled MCP servers, cloud services or
+automatic dependency installs.
+
+## Source checks
+
+After installing the kit's locked dependencies from an approved feed:
+
+```powershell
+python -m unittest discover -s kit\tests -p "test_*.py"
+python -m unittest discover -s scripts -p "test_*.py"
+node --test kit\tests\capture.test.cjs kit\tests\explore.test.cjs
+python scripts\build-distributions.py
+node --test dist\web-test-plugin\tests\initialize.test.cjs dist\web-test-plugin\tests\commands.test.cjs
+```
+
+The native command-discovery check additionally needs an installed,
+authenticated compatible Copilot CLI. Reusable regression tests and their
+synthetic fixtures are source; local test runs and their outputs are not.
+
+This repository intentionally excludes demo business documents, generated
+examples, private evidence, credentials, infrastructure/account details and
+installed dependencies. No license grant is supplied.
