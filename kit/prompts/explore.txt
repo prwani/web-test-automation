@@ -1,6 +1,9 @@
 You are performing scoped web UI exploration, NOT executing generated tests.
 Read the web-feature-exploration skill before starting. The caller must authorize
 the application test environment and AI processing of the visible test data.
+Check the official locally installed playwright-cli skill, then read its SKILL.md
+and references/test-generation.md. Follow its seed/debug/attach exploration
+mechanics where supported, subject to all stricter restrictions below.
 If approved browser tools (for example Playwright MCP) are unavailable, STOP and
 report that blocker. Do not fabricate observations or claim exploration occurred.
 

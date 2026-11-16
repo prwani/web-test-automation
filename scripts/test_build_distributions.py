@@ -102,7 +102,8 @@ class BuilderSafetyTests(unittest.TestCase):
             kit_manifest = json.loads(archive.read("MANIFEST.json"))
             self.assertEqual(kit_manifest["package"], "Web-Test-Automation-Kit")
             self.assertEqual(set(kit_manifest["files"]), set(names))
-        with ZipFile(dist / "Web-Test-Copilot-Plugin-1.3.0.zip") as archive:
+        plugin_version = json.loads((builder.PLUGIN / "plugin.json").read_text(encoding="utf-8"))["version"]
+        with ZipFile(dist / f"Web-Test-Copilot-Plugin-{plugin_version}.zip") as archive:
             kit_manifest = json.loads(archive.read("skills/web-test/kit/MANIFEST.json"))
             self.assertEqual(kit_manifest["package"], "Web-Test-Automation-Kit")
             self.assertIn("skills/web-feature-exploration/SKILL.md", archive.namelist())

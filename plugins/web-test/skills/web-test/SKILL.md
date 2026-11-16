@@ -43,6 +43,10 @@ credentials, runs or installed dependencies into the plugin cache.
 Check runtimes and obtain permission before installing missing dependencies.
 Browser/MCP capabilities, Node.js, Python/openpyxl and host authentication are
 user setup; do not install or run hooks during plugin load.
+After dependency approval, explicitly set up and check the official
+`playwright-cli` skill with the workspace README; never install it in the
+plugin cache or globally. Read the actual installed skill and its
+`references/test-generation.md` for exploration and native test generation.
 
 ## Explore and generate
 
@@ -71,20 +75,26 @@ Preserve IDs, provenance and draft/not-executed status until user review.
 Use `web-playwright-automation` for executable tests or execution. Accept
 supported kit XLSX/JSON or folders and resolve them via verified source-to-test
 mappings, not guessed spec filenames. Missing, stale or ambiguous mappings
-block execution. Obtain case approval before preparing a new automation
-request, author a plan from observed UI evidence, and separately obtain plan
-approval before compiling. Preserve each ID, precondition, citation and all
+block execution. Obtain case approval before preparing a new native automation
+request, author a plan from observed UI evidence using the upstream
+seed/debug/attach/plan/generate workflow, and separately obtain native test
+code review and approval before registration. Preserve each ID, precondition, citation and all
 positive and negative expected outcomes. Structural validation does not prove
 business coverage; missing evidence or unsupported behavior is a blocker.
 
 Run only against the explicitly authorized application target pinned at
-compilation, after source and compiled hashes match. Do not infer the target
+registration, after source and test hashes match. Do not infer the target
 from source documents. Evidence capture requires explicit data authorization.
 Report actual mapped per-case results and private evidence paths separately
 from draft definitions. Never weaken assertions, skip unsupported cases or
 claim unexecuted tests passed.
 
-This is a constrained read-only workflow, not universal web automation:
-arbitrary widgets, write operations and cross-origin authentication are not
-implemented by this naming change. It bundles no MCP server, hooks, hosted
+Native code requires human review; it is not sandboxed. The legacy constrained
+compiler remains available but is not the official generator. No changed
+business outcomes without approval; no skip/fixme/only/retries, mocking, stubs,
+API substitution or credential reads. Limit observed locator/synchronization
+repair to two attempts with reruns; report remaining failures.
+
+This is a read-only workflow, not universal web automation: arbitrary widgets
+and authentication combinations are not all validated. It bundles no MCP server, hooks, hosted
 service or cloud configuration.

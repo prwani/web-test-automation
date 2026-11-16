@@ -329,6 +329,10 @@ def report_cases(report, selected):
 
 def execute(source, explicit=None, case_ids=None, evidence=False, headed=False):
     mapping_path = resolve_mapping(source, explicit)
+    if read_json(mapping_path).get("engine") == "playwright-cli":
+        from official import execute as execute_official
+        return execute_official(source, explicit=mapping_path, case_ids=case_ids,
+                                evidence=evidence, headed=headed)
     mapping = verify_mapping(mapping_path)
     check_aliases(os.environ)
     if app_url(aliased(os.environ, "BASE_URL")) != app_url(mapping["baseURL"]):

@@ -21,7 +21,7 @@ missing required details or unresolved review decisions. Prompt text is not
 shell code and does not bypass approval gates.
 
 Use the plugin's `web-test` skill for safe workspace/path resolution, then
-`web-playwright-automation` for preparation and compilation only. Reuse an
+`web-playwright-automation` for native preparation and registration only. Reuse an
 approved initialized workspace; never write into the plugin cache.
 
 Accept the kit's XLSX/JSON/case folder and its required companion files. Obtain
@@ -30,10 +30,14 @@ evidence, preserving every case ID, precondition and all positive/negative
 expected outcomes. Never invent selectors, skip unsupported cases or weaken
 assertions. Identify unsupported behavior and authentication as blockers.
 
-Stop for separate user review of the complete plan before compilation.
-Compile only after that approval and confirmation of the authorized application target.
-Use the existing trusted compiler and record source/compiled hashes and
-source-to-test mapping. Keep credentials outside prompts and generated files.
+Check and read the actual installed official playwright-cli skill and its
+test-generation reference. Follow upstream seed/debug/attach/plan/generate
+mechanics under the workspace restrictions. Stop for separate review of the
+complete native code, plan and authorized application target before registration.
+Native code is not sandboxed; structural checks are not a substitute for review.
+Register approved tests and record source/test hashes and source-to-test mapping.
+Keep credentials outside prompts and generated files. The legacy compiler is
+not the official generator.
 
 Output executable tests and the pinned mapping, not a passing execution claim.
 Do not run the tests automatically. A preview-only request must describe

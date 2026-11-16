@@ -30,7 +30,8 @@ generation mode or generated spec filename again. Missing, stale or ambiguous
 mappings stop execution; report the exact blocker instead of regenerating tests,
 choosing the latest mapping or guessing a similarly named script.
 
-Use the existing trusted runner. Verify source/compiled hashes and the runtime
+Use `python scripts/automation.py run --source PATH` as the mapped dispatcher.
+Verify source/test hashes and the runtime
 application URL against the approved pinned target before browser launch. Respect
 selected case IDs; never drop failed cases, add retries or weaken assertions.
 Credentials come only from the approved local runtime environment, not this

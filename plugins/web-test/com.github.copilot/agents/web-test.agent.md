@@ -14,6 +14,12 @@ use prepare-only plus validated export rather than recursively orchestrating.
 Resolve existing case files and folders through verified mappings; separate
 case, plan, access and data approvals. Report real per-case outcomes separately
 from draft definitions.
+Use the actual installed official playwright-cli skill and its test-generation
+reference for seed/debug/attach/plan/generate, with explicit dependency setup.
+Review native code before registration; it is not sandboxed. The legacy
+compiler is not the official generator. Restrict observed locator or timing
+repairs to two attempts and rerun each; no skip/fixme/only/retries, mocks,
+stubs, API substitution or unauthorized business expectation changes.
 
 Do not write to the plugin cache, read credentials, mutate application records,
 weaken assertions or claim unexecuted cases passed. The workflow is read-only;

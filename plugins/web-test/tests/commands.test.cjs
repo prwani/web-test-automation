@@ -10,7 +10,7 @@ test('wrapper declares four inline commands with preview and approval gates', ()
   const plugin = path.resolve(__dirname, '..');
   const metadata = JSON.parse(fs.readFileSync(path.join(plugin, 'plugin.json'), 'utf8'));
   assert.equal(metadata.name, 'web-test');
-  assert.equal(metadata.version, '1.3.0');
+  assert.equal(metadata.version, '1.4.0');
   const commandDir = path.join(plugin, 'com.github.copilot', 'commands');
   const names = ['explore', 'generate-cases', 'create-tests', 'run-tests'];
   assert.deepEqual(fs.readdirSync(commandDir).sort(), names.map(name => `${name}.md`).sort());

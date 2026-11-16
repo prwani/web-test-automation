@@ -1,16 +1,17 @@
 {
   "name": "web-test-automation-kit",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
-  "description": "Copilot-assisted web test-case generation and source-mapped Playwright compilation/execution",
+  "description": "Copilot-assisted traceable web test generation and source-mapped Playwright execution",
   "scripts": {
     "capture": "node scripts/capture.cjs",
     "explore:prepare": "node scripts/explore.cjs",
     "test:browser": "node --test tests/prompt-browser.test.cjs",
     "test:automation": "python tests/automation-browser.py",
-    "test": "python -m unittest discover -s tests && node --test tests/capture.test.cjs tests/explore.test.cjs"
+    "test": "python -m unittest discover -s tests && node --test tests/capture.test.cjs tests/explore.test.cjs tests/playwright-skill.test.cjs"
   },
   "devDependencies": {
+    "@playwright/cli": "0.1.23",
     "@playwright/test": "1.64.1"
   }
 }

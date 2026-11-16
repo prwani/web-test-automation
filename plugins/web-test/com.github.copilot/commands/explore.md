@@ -31,6 +31,8 @@ Use approved browser tools or the existing human-guided capture path. Task
 preparation alone is not exploration. Human login handles SSO/MFA; never read
 credentials or export authentication state. Restrict interactions to the
 requested read/search/navigation scope; no record mutations.
+Check and read the installed official playwright-cli skill and its
+test-generation reference; use its seed/debug/attach mechanics where supported.
 Arbitrary widgets, write operations and cross-origin authentication are not
 implemented by this naming change; report unsupported behavior as a blocker.
 

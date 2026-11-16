@@ -38,3 +38,5 @@ storageState*.json
 .crm-testcase-workspace.json
 MANIFEST.json
 BUNDLE-MANIFEST.json
+.agents/
+.playwright-cli/

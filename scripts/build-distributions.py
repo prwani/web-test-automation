@@ -21,9 +21,12 @@ KIT_FILES = [
     ".github/skills/web-testcase-generation/SKILL.md",
     "prompts/automate.txt", "prompts/explore.txt", "prompts/generate.txt",
     "scripts/automation.py", "scripts/capture.cjs", "scripts/cases.py", "scripts/explore.cjs",
+    "scripts/official.py", "scripts/playwright-skill.cjs",
     "templates/playwright-runtime.cjs", "templates/playwright.config.cjs",
+    "templates/official-fixtures.ts", "templates/official-seed.spec.ts", "templates/official-playwright.config.cjs",
     "tests/automation-browser.py", "tests/capture.test.cjs", "tests/explore.test.cjs",
     "tests/fixtures.py", "tests/prompt-browser.test.cjs", "tests/test_automation.py", "tests/test_cases.py",
+    "tests/test_official.py", "tests/playwright-skill.test.cjs",
 ]
 PLUGIN_FILES = [
     "plugin.json", "README.md", "skills/web-test/SKILL.md",
