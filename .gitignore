@@ -1,0 +1,23 @@
+# Generated packages and local runtime data
+dist/
+.scratch/
+.local/
+runs/
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.zip
+*.log
+playwright-report/
+test-results/
+coverage/
+*.trace
+*.har
+*.png
+*.webm
+*.env
+.env
+.env.*
+!.env.example

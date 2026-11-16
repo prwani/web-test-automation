@@ -1,0 +1,16 @@
+{
+  "name": "crm-testcase-customer-kit",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Copilot-assisted CRM test-case generation and source-mapped Playwright compilation/execution",
+  "scripts": {
+    "capture": "node scripts/capture.cjs",
+    "explore:prepare": "node scripts/explore.cjs",
+    "test:browser": "node --test tests/prompt-browser.test.cjs",
+    "test:automation": "python tests/automation-browser.py",
+    "test": "python -m unittest discover -s tests && node --test tests/capture.test.cjs tests/explore.test.cjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  }
+}
